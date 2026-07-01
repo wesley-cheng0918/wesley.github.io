@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="3D game art portfolio presented as an interactive publication.">
+    <title>3D Game Modeling Portfolio</title>
+    <link rel="stylesheet" href="style.css">
+  </head>
+  <body>
+    <header class="site-header" aria-label="Site header">
+      <a class="brand" href="index.html" aria-label="Portfolio home">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span>3D Portfolio</span>
+      </a>
+
+      <nav class="site-nav" aria-label="Primary navigation">
+        <a href="#library">Library</a>
+        <a href="#reader">Reader</a>
+        <a href="#viewer">Viewer</a>
+        <a href="#about">About</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero" id="viewer" aria-labelledby="hero-title">
+        <div class="hero-copy">
+          <p class="eyebrow">Digital Artbook / 3D Game Modeling</p>
+          <h1 id="hero-title">Interactive portfolio issues for production-ready game assets.</h1>
+          <p>
+            Present model sheets, beauty renders, wireframes, and process pages in a
+            magazine-style reader built for GitHub Pages.
+          </p>
+          <div class="hero-actions">
+            <a class="button button-primary" href="#reader">Open reader</a>
+            <a class="button button-secondary" href="#library">Browse issues</a>
+          </div>
+          <dl class="hero-stats" aria-label="Portfolio stats">
+            <div>
+              <dt>03</dt>
+              <dd>Sample issues</dd>
+            </div>
+            <div>
+              <dt>PDF</dt>
+              <dd>PageFlip ready</dd>
+            </div>
+            <div>
+              <dt>GH</dt>
+              <dd>Pages deployable</dd>
+            </div>
+          </dl>
+        </div>
+
+        <div class="publication-stage" aria-label="Featured project preview">
+          <div class="stage-frame">
+            <span>Portfolio Viewer</span>
+            <span>Issue 01</span>
+          </div>
+          <article class="cover cover-active">
+            <p>Featured Issue</p>
+            <h2>Hard Surface Kitbash</h2>
+            <span>Environment Props / Shader Notes / 2026</span>
+          </article>
+          <article class="cover cover-back" aria-hidden="true">
+            <p>Archive</p>
+            <h2>Creature Sculpt</h2>
+            <span>Character Art</span>
+          </article>
+        </div>
+      </section>
+
+      <section class="section" id="library" aria-labelledby="library-title">
+        <div class="section-heading">
+          <p class="eyebrow">Project Library</p>
+          <h2 id="library-title">Portfolio Issues</h2>
+        </div>
+
+        <div class="project-grid" id="project-grid" aria-live="polite"></div>
+      </section>
+
+      <section class="section reader-section" id="reader" aria-labelledby="reader-title">
+        <div class="section-heading">
+          <p class="eyebrow">PDF Publication</p>
+          <h2 id="reader-title">Load a portfolio PDF and flip through the pages.</h2>
+        </div>
+
+        <div class="pdf-reader" data-pdf-reader>
+          <div class="reader-toolbar" aria-label="PDF reader controls">
+            <label class="button button-primary file-button">
+              Load PDF
+              <input id="pdf-file" type="file" accept="application/pdf">
+            </label>
+            <button class="button button-secondary" type="button" data-pdf-prev>Previous</button>
+            <span class="page-status" data-pdf-status>Page 0 / 0</span>
+            <button class="button button-secondary" type="button" data-pdf-next>Next</button>
+            <button class="button button-secondary" type="button" data-pdf-download>Download</button>
+            <button class="button button-secondary" type="button" data-pdf-fullscreen>Fullscreen</button>
+            <button class="button button-secondary" type="button" data-pdf-zoom-out>Zoom out</button>
+            <button class="button button-secondary" type="button" data-pdf-zoom-in>Zoom in</button>
+          </div>
+
+          <div class="pdf-book-wrap">
+            <div class="pdf-book" id="pdf-book" aria-label="PDF page flip preview"></div>
+            <p class="reader-empty" data-pdf-empty>Load a PDF to preview portfolio pages here.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section about-section" id="about" aria-labelledby="about-title">
+        <div class="section-heading">
+          <p class="eyebrow">Artist Profile</p>
+          <h2 id="about-title">A focused shell for 3D art direction and breakdowns.</h2>
+        </div>
+        <p>
+          Replace the sample issues with final PDF artbooks, render thumbnails, model
+          previews, and production notes as the portfolio content becomes available.
+        </p>
+      </section>
+    </main>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.min.js"></script>
+    <script src="script.js"></script>
+  </body>
+</html>
