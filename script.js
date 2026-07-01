@@ -87,6 +87,8 @@ function initScrollAnimations() {
 
 initScrollAnimations();
 
+const defaultPdfUrl = "assets/pdf/portfolio.pdf";
+
 const pdfState = {
   document: null,
   pageNumber: 1,
@@ -94,6 +96,7 @@ const pdfState = {
   pageFlip: null,
   fileName: "",
   fileUrl: "",
+  fileUrlIsObject: false,
   isRendering: false,
   renderToken: 0,
   pageSize: {
@@ -113,6 +116,7 @@ const pdfDownloadButton = document.querySelector("[data-pdf-download]");
 const pdfFullscreenButton = document.querySelector("[data-pdf-fullscreen]");
 const pdfZoomOutButton = document.querySelector("[data-pdf-zoom-out]");
 const pdfZoomInButton = document.querySelector("[data-pdf-zoom-in]");
+const maxPdfCanvasSide = 1600;
 
 if (window.pdfjsLib) {
   pdfjsLib.GlobalWorkerOptions.workerSrc =
@@ -178,6 +182,16 @@ function createPageFlip() {
   updatePdfStatus();
 }
 
+function getRenderViewport(page, scale) {
+  const baseViewport = page.getViewport({ scale: 1 });
+  const safeScale = Math.min(
+    scale,
+    maxPdfCanvasSide / Math.max(baseViewport.width, baseViewport.height)
+  );
+
+  return page.getViewport({ scale: safeScale });
+}
+
 async function renderPdfPages() {
   if (!pdfState.document || !pdfBook) {
     updatePdfStatus();
@@ -188,8 +202,6 @@ async function renderPdfPages() {
 
   pdfState.renderToken = renderToken;
   pdfState.isRendering = true;
-  resetPageFlip();
-  pdfBook.replaceChildren();
   pdfEmpty.hidden = true;
   pdfStatus.textContent = "Loading pages...";
   updatePdfControls();
@@ -203,7 +215,7 @@ async function renderPdfPages() {
       }
 
       const page = await pdfState.document.getPage(pageNumber);
-      const viewport = page.getViewport({ scale: pdfState.scale });
+      const viewport = getRenderViewport(page, pdfState.scale);
       const canvas = document.createElement("canvas");
       const context = canvas.getContext("2d");
 
@@ -237,6 +249,7 @@ async function renderPdfPages() {
       return;
     }
 
+    resetPageFlip();
     pdfBook.replaceChildren(...pages);
     pdfState.pageNumber = 1;
     pdfState.isRendering = false;
@@ -252,22 +265,56 @@ async function renderPdfPages() {
   }
 }
 
-async function loadPdf(file) {
-  if (!window.pdfjsLib || !file) {
+async function loadPdfData(data, fileName, fileUrl, fileUrlIsObject) {
+  if (!window.pdfjsLib || !data) {
     return;
   }
 
-  if (pdfState.fileUrl) {
+  if (pdfState.fileUrl && pdfState.fileUrlIsObject) {
     URL.revokeObjectURL(pdfState.fileUrl);
   }
 
-  const data = await file.arrayBuffer();
-  pdfState.fileName = file.name || "portfolio.pdf";
-  pdfState.fileUrl = URL.createObjectURL(file);
+  pdfState.fileName = fileName || "portfolio.pdf";
+  pdfState.fileUrl = fileUrl || "";
+  pdfState.fileUrlIsObject = fileUrlIsObject;
   pdfState.document = await pdfjsLib.getDocument({ data }).promise;
   pdfState.pageNumber = 1;
   pdfState.scale = 1;
   await renderPdfPages();
+}
+
+async function loadPdf(file) {
+  if (!file) {
+    return;
+  }
+
+  await loadPdfData(
+    await file.arrayBuffer(),
+    file.name || "portfolio.pdf",
+    URL.createObjectURL(file),
+    true
+  );
+}
+
+async function loadDefaultPdf() {
+  if (!window.pdfjsLib) {
+    pdfStatus.textContent = "PDF.js is unavailable.";
+    return;
+  }
+
+  try {
+    pdfStatus.textContent = "Loading portfolio PDF...";
+    const response = await fetch(defaultPdfUrl);
+
+    if (!response.ok) {
+      throw new Error("Default PDF was not found.");
+    }
+
+    await loadPdfData(await response.arrayBuffer(), "portfolio.pdf", defaultPdfUrl, false);
+  } catch (error) {
+    pdfStatus.textContent = "Could not load portfolio PDF.";
+    updatePdfControls();
+  }
 }
 
 pdfFileInput.addEventListener("change", (event) => {
@@ -334,3 +381,4 @@ pdfZoomInButton.addEventListener("click", () => {
 });
 
 updatePdfStatus();
+loadDefaultPdf();
