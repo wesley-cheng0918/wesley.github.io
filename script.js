@@ -117,6 +117,8 @@ const pdfFullscreenButton = document.querySelector("[data-pdf-fullscreen]");
 const pdfZoomOutButton = document.querySelector("[data-pdf-zoom-out]");
 const pdfZoomInButton = document.querySelector("[data-pdf-zoom-in]");
 const maxPdfCanvasSide = 1600;
+const minPdfZoom = 0.8;
+const maxPdfZoom = 1.8;
 
 if (window.pdfjsLib) {
   pdfjsLib.GlobalWorkerOptions.workerSrc =
@@ -132,8 +134,8 @@ function updatePdfControls() {
   pdfPrevButton.disabled = !hasPageFlip || isFirstPage || pdfState.isRendering;
   pdfNextButton.disabled = !hasPageFlip || isLastPage || pdfState.isRendering;
   pdfDownloadButton.disabled = !pdfState.fileUrl || pdfState.isRendering;
-  pdfZoomOutButton.disabled = !hasDocument || pdfState.scale <= 0.6 || pdfState.isRendering;
-  pdfZoomInButton.disabled = !hasDocument || pdfState.scale >= 2.2 || pdfState.isRendering;
+  pdfZoomOutButton.disabled = !hasDocument || pdfState.scale <= minPdfZoom || pdfState.isRendering;
+  pdfZoomInButton.disabled = !hasDocument || pdfState.scale >= maxPdfZoom || pdfState.isRendering;
 }
 
 function updatePdfStatus() {
@@ -179,7 +181,16 @@ function createPageFlip() {
     updatePdfStatus();
   });
 
+  applyPdfZoom();
   updatePdfStatus();
+}
+
+function applyPdfZoom() {
+  if (!pdfBook) {
+    return;
+  }
+
+  pdfBook.style.setProperty("--pdf-zoom", pdfState.scale);
 }
 
 function getRenderViewport(page, scale) {
@@ -280,6 +291,7 @@ async function loadPdfData(data, fileName, fileUrl, fileUrlIsObject) {
   pdfState.document = await pdfjsLib.getDocument({ data }).promise;
   pdfState.pageNumber = 1;
   pdfState.scale = 1;
+  applyPdfZoom();
   await renderPdfPages();
 }
 
@@ -367,8 +379,9 @@ pdfZoomOutButton.addEventListener("click", () => {
     return;
   }
 
-  pdfState.scale = Math.max(0.6, pdfState.scale - 0.2);
-  renderPdfPages();
+  pdfState.scale = Math.max(minPdfZoom, pdfState.scale - 0.1);
+  applyPdfZoom();
+  updatePdfControls();
 });
 
 pdfZoomInButton.addEventListener("click", () => {
@@ -376,8 +389,9 @@ pdfZoomInButton.addEventListener("click", () => {
     return;
   }
 
-  pdfState.scale = Math.min(2.2, pdfState.scale + 0.2);
-  renderPdfPages();
+  pdfState.scale = Math.min(maxPdfZoom, pdfState.scale + 0.1);
+  applyPdfZoom();
+  updatePdfControls();
 });
 
 updatePdfStatus();

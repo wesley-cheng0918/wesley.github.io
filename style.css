@@ -479,6 +479,7 @@ select {
   place-items: center;
   min-height: 560px;
   padding: 28px;
+  overflow: auto;
   background:
     linear-gradient(140deg, rgba(127, 183, 201, 0.08), transparent 45%),
     linear-gradient(45deg, rgba(255, 255, 255, 0.03) 25%, transparent 25%),
@@ -488,8 +489,11 @@ select {
 }
 
 .pdf-book {
+  --pdf-zoom: 1;
   width: min(100%, 980px);
   min-height: 500px;
+  zoom: var(--pdf-zoom);
+  transition: filter 160ms ease;
 }
 
 .pdf-page {

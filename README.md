@@ -23,3 +23,4 @@ The reader toolbar supports previous page, next page, PDF download, fullscreen, 
 The UI includes subtle entrance, hover, and cover-motion animations with reduced-motion support.
 The layout is tuned for desktop, tablet, and mobile breakpoints.
 The PDF reader disables unavailable controls and protects against overlapping page-render requests.
+Zoom controls scale the loaded PageFlip book without re-rendering the PDF pages.
