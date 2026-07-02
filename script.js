@@ -27,6 +27,7 @@ const pdfDownloadButton = document.querySelector("[data-pdf-download]");
 const pdfFullscreenButton = document.querySelector("[data-pdf-fullscreen]");
 const pdfZoomOutButton = document.querySelector("[data-pdf-zoom-out]");
 const pdfZoomInButton = document.querySelector("[data-pdf-zoom-in]");
+const pdfBookWrap = document.querySelector(".pdf-book-wrap");
 const maxPdfCanvasSide = 1600;
 const minPdfZoom = 0.8;
 const maxPdfZoom = 1.8;
@@ -49,10 +50,20 @@ function updatePdfControls() {
   pdfZoomInButton.disabled = !hasDocument || pdfState.scale >= maxPdfZoom || pdfState.isRendering;
 }
 
+function updateReaderLayout() {
+  if (!pdfBookWrap || !pdfState.document) {
+    return;
+  }
+
+  pdfBookWrap.classList.toggle("is-cover-start", pdfState.pageNumber === 1);
+  pdfBookWrap.classList.toggle("is-cover-end", pdfState.pageNumber === pdfState.document.numPages);
+}
+
 function updatePdfStatus() {
   const totalPages = pdfState.document ? pdfState.document.numPages : 0;
 
   pdfStatus.textContent = `Page ${totalPages ? pdfState.pageNumber : 0} / ${totalPages}`;
+  updateReaderLayout();
   updatePdfControls();
 }
 
@@ -90,6 +101,10 @@ function createPageFlip() {
   pdfState.pageFlip.on("flip", (event) => {
     pdfState.pageNumber = event.data + 1;
     updatePdfStatus();
+  });
+
+  pdfState.pageFlip.on("changeState", (event) => {
+    pdfBookWrap.classList.toggle("is-flipping", event.data !== "read");
   });
 
   applyPdfZoom();

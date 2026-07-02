@@ -136,6 +136,19 @@ main {
   width: min(100%, 980px);
   min-height: 500px;
   zoom: var(--pdf-zoom);
+  transition: transform 240ms ease;
+}
+
+.pdf-book-wrap.is-cover-start:not(.is-flipping) .pdf-book {
+  transform: translateX(-25%);
+}
+
+.pdf-book-wrap.is-cover-end:not(.is-flipping) .pdf-book {
+  transform: translateX(25%);
+}
+
+.pdf-book-wrap.is-flipping .pdf-book {
+  transform: translateX(0);
 }
 
 .pdf-page {
