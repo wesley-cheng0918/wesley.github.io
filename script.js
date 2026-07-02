@@ -32,6 +32,7 @@ const maxPdfCanvasSide = 1600;
 const minPdfZoom = 0.8;
 const maxPdfZoom = 1.8;
 const textLinkPattern = /(https?:\/\/[^\s<>"']+|www\.[^\s<>"']+|[\w.+-]+@[\w.-]+\.[A-Za-z]{2,})/gi;
+const defaultTextLinkPages = new Set([8]);
 const fallbackPdfLinks = [
   {
     pageNumber: 36,
@@ -71,11 +72,9 @@ if (pdfBookWrap) {
 function updatePdfControls() {
   const hasDocument = Boolean(pdfState.document);
   const hasPageFlip = Boolean(pdfState.pageFlip);
-  const isFirstPage = pdfState.pageNumber <= 1;
-  const isLastPage = hasDocument && pdfState.pageNumber >= pdfState.document.numPages;
 
-  pdfPrevButton.disabled = !hasPageFlip || isFirstPage || pdfState.isRendering;
-  pdfNextButton.disabled = !hasPageFlip || isLastPage || pdfState.isRendering;
+  pdfPrevButton.disabled = !hasPageFlip;
+  pdfNextButton.disabled = !hasPageFlip;
   pdfDownloadButton.disabled = !pdfState.fileUrl || pdfState.isRendering;
   pdfZoomOutButton.disabled = !hasDocument || pdfState.scale <= minPdfZoom || pdfState.isRendering;
   pdfZoomInButton.disabled = !hasDocument || pdfState.scale >= maxPdfZoom || pdfState.isRendering;
@@ -371,6 +370,111 @@ function createFallbackPdfLinks(pageNumber, viewport) {
     });
 }
 
+function isDefaultPortfolioPdf() {
+  return !pdfState.fileUrlIsObject && pdfState.fileUrl === defaultPdfUrl;
+}
+
+function createEmptyPdfPage(pageNumber, viewport) {
+  const pageElement = document.createElement("div");
+
+  pageElement.className = "pdf-page is-loading";
+  pageElement.dataset.pageNumber = pageNumber;
+  pageElement.style.width = `${viewport.width}px`;
+  pageElement.style.height = `${viewport.height}px`;
+
+  return pageElement;
+}
+
+function shouldScanTextLinks(pageNumber) {
+  return !isDefaultPortfolioPdf() || defaultTextLinkPages.has(pageNumber);
+}
+
+function waitForNextRenderBatch() {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, 0);
+  });
+}
+
+async function renderPdfPageIntoElement(pageNumber, pageElement, renderToken, loadedPage = null) {
+  if (renderToken !== pdfState.renderToken) {
+    return;
+  }
+
+  const page = loadedPage || await pdfState.document.getPage(pageNumber);
+  const viewport = getRenderViewport(page, pdfState.scale);
+  const canvas = document.createElement("canvas");
+  const context = canvas.getContext("2d");
+
+  canvas.width = viewport.width;
+  canvas.height = viewport.height;
+  pageElement.style.width = `${viewport.width}px`;
+  pageElement.style.height = `${viewport.height}px`;
+
+  await page.render({
+    canvasContext: context,
+    viewport
+  }).promise;
+
+  if (renderToken !== pdfState.renderToken) {
+    return;
+  }
+
+  const pageImage = document.createElement("img");
+  const annotations = await page.getAnnotations({ intent: "display" });
+  const textContent = shouldScanTextLinks(pageNumber) ? await page.getTextContent() : null;
+
+  pageImage.decoding = "async";
+  pageImage.src = canvas.toDataURL("image/png");
+  pageImage.alt = `PDF page ${pageNumber}`;
+  pageElement.replaceChildren(pageImage);
+  pageElement.classList.remove("is-loading");
+
+  annotations.forEach((annotation) => {
+    const link = createPdfLink(annotation, viewport);
+
+    if (link) {
+      pageElement.append(link);
+    }
+  });
+
+  if (textContent) {
+    createTextPdfLinks(textContent, viewport).forEach((link) => {
+      pageElement.append(link);
+    });
+  }
+
+  if (isDefaultPortfolioPdf()) {
+    createFallbackPdfLinks(pageNumber, viewport).forEach((link) => {
+      pageElement.append(link);
+    });
+  }
+}
+
+async function renderRemainingPdfPages(pageElements, renderToken) {
+  try {
+    for (let pageNumber = 2; pageNumber <= pdfState.document.numPages; pageNumber += 1) {
+      if (renderToken !== pdfState.renderToken) {
+        return;
+      }
+
+      await renderPdfPageIntoElement(pageNumber, pageElements[pageNumber - 1], renderToken);
+      await waitForNextRenderBatch();
+    }
+  } catch (error) {
+    if (renderToken === pdfState.renderToken) {
+      pdfStatus.textContent = "Some pages could not render.";
+    }
+  }
+}
+
+function startRenderingRemainingPdfPages(pageElements, renderToken) {
+  if (pageElements.length <= 1) {
+    return;
+  }
+
+  renderRemainingPdfPages(pageElements, renderToken);
+}
+
 async function renderPdfPages() {
   if (!pdfState.document || !pdfBook) {
     updatePdfStatus();
@@ -386,65 +490,19 @@ async function renderPdfPages() {
   updatePdfControls();
 
   try {
-    const pages = [];
+    const firstPage = await pdfState.document.getPage(1);
+    const firstViewport = getRenderViewport(firstPage, pdfState.scale);
+    const pages = Array.from(
+      { length: pdfState.document.numPages },
+      (_, index) => createEmptyPdfPage(index + 1, firstViewport)
+    );
 
-    for (let pageNumber = 1; pageNumber <= pdfState.document.numPages; pageNumber += 1) {
-      if (renderToken !== pdfState.renderToken) {
-        return;
-      }
+    pdfState.pageSize = {
+      width: firstViewport.width,
+      height: firstViewport.height
+    };
 
-      const page = await pdfState.document.getPage(pageNumber);
-      const viewport = getRenderViewport(page, pdfState.scale);
-      const canvas = document.createElement("canvas");
-      const context = canvas.getContext("2d");
-
-      canvas.width = viewport.width;
-      canvas.height = viewport.height;
-
-      if (pageNumber === 1) {
-        pdfState.pageSize = {
-          width: viewport.width,
-          height: viewport.height
-        };
-      }
-
-      await page.render({
-        canvasContext: context,
-        viewport
-      }).promise;
-
-      const pageElement = document.createElement("div");
-      const pageImage = document.createElement("img");
-      const annotations = await page.getAnnotations({ intent: "display" });
-      const textContent = await page.getTextContent();
-
-      pageElement.className = "pdf-page";
-      pageElement.dataset.pageNumber = pageNumber;
-      pageElement.style.width = `${viewport.width}px`;
-      pageElement.style.height = `${viewport.height}px`;
-      pageImage.decoding = "async";
-      pageImage.src = canvas.toDataURL("image/png");
-      pageImage.alt = `PDF page ${pageNumber}`;
-      pageElement.append(pageImage);
-
-      annotations.forEach((annotation) => {
-        const link = createPdfLink(annotation, viewport);
-
-        if (link) {
-          pageElement.append(link);
-        }
-      });
-
-      createTextPdfLinks(textContent, viewport).forEach((link) => {
-        pageElement.append(link);
-      });
-
-      createFallbackPdfLinks(pageNumber, viewport).forEach((link) => {
-        pageElement.append(link);
-      });
-
-      pages.push(pageElement);
-    }
+    await renderPdfPageIntoElement(1, pages[0], renderToken, firstPage);
 
     if (renderToken !== pdfState.renderToken) {
       return;
@@ -455,6 +513,7 @@ async function renderPdfPages() {
     pdfState.pageNumber = 1;
     pdfState.isRendering = false;
     createPageFlip();
+    startRenderingRemainingPdfPages(pages, renderToken);
   } catch (error) {
     if (renderToken !== pdfState.renderToken) {
       return;
@@ -524,7 +583,12 @@ pdfFileInput.addEventListener("change", (event) => {
 });
 
 pdfPrevButton.addEventListener("click", () => {
-  if (!pdfState.document || !pdfState.pageFlip || pdfState.pageNumber <= 1) {
+  if (!pdfState.document || !pdfState.pageFlip) {
+    return;
+  }
+
+  if (pdfState.pageNumber <= 1 && typeof pdfState.pageFlip.flip === "function") {
+    pdfState.pageFlip.flip(pdfState.document.numPages - 1);
     return;
   }
 
@@ -532,7 +596,12 @@ pdfPrevButton.addEventListener("click", () => {
 });
 
 pdfNextButton.addEventListener("click", () => {
-  if (!pdfState.document || !pdfState.pageFlip || pdfState.pageNumber >= pdfState.document.numPages) {
+  if (!pdfState.document || !pdfState.pageFlip) {
+    return;
+  }
+
+  if (pdfState.pageNumber >= pdfState.document.numPages && typeof pdfState.pageFlip.flip === "function") {
+    pdfState.pageFlip.flip(0);
     return;
   }
 
