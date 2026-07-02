@@ -32,7 +32,7 @@ const maxPdfCanvasSide = 1600;
 const minPdfZoom = 0.8;
 const maxPdfZoom = 1.8;
 const textLinkPattern = /(https?:\/\/[^\s<>"']+|www\.[^\s<>"']+|[\w.+-]+@[\w.-]+\.[A-Za-z]{2,})/gi;
-const defaultTextLinkPages = new Set([8]);
+const defaultTextLinkPages = new Set();
 const fallbackPdfLinks = [
   {
     pageNumber: 36,
