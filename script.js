@@ -62,6 +62,12 @@ if (window.pdfjsLib) {
     "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 }
 
+if (pdfBookWrap) {
+  ["pointerdown", "mousedown", "touchstart", "click"].forEach((eventName) => {
+    pdfBookWrap.addEventListener(eventName, handlePdfLinkEvent, true);
+  });
+}
+
 function updatePdfControls() {
   const hasDocument = Boolean(pdfState.document);
   const hasPageFlip = Boolean(pdfState.pageFlip);
@@ -134,6 +140,75 @@ function createPageFlip() {
 
   applyPdfZoom();
   updatePdfStatus();
+}
+
+function handlePdfLinkEvent(event) {
+  const link = event.target.closest(".pdf-link");
+  const fallbackLink = link ? null : getFallbackLinkAtPoint(event);
+
+  if (!link && !fallbackLink) {
+    return;
+  }
+
+  event.stopPropagation();
+
+  if (event.type !== "click") {
+    return;
+  }
+
+  const href = link ? link.href : fallbackLink.href;
+
+  if (!href || (link && link.getAttribute("href") === "#")) {
+    return;
+  }
+
+  event.preventDefault();
+  openPdfLink(href);
+}
+
+function getFallbackLinkAtPoint(event) {
+  if (!pdfBookWrap) {
+    return null;
+  }
+
+  const x = event.clientX;
+  const y = event.clientY;
+  const pages = pdfBookWrap.querySelectorAll(".pdf-page[data-page-number]");
+
+  for (const page of pages) {
+    const pageRect = page.getBoundingClientRect();
+    const pageNumber = Number(page.dataset.pageNumber);
+
+    if (pageRect.width <= 0 || pageRect.height <= 0) {
+      continue;
+    }
+
+    const linkData = fallbackPdfLinks.find((fallbackLink) => fallbackLink.pageNumber === pageNumber);
+
+    if (!linkData) {
+      continue;
+    }
+
+    const left = pageRect.left + (linkData.left / linkData.pageWidth) * pageRect.width;
+    const top = pageRect.top + ((linkData.top - 8) / linkData.pageHeight) * pageRect.height;
+    const right = left + (linkData.width / linkData.pageWidth) * pageRect.width;
+    const bottom = top + ((linkData.height + 16) / linkData.pageHeight) * pageRect.height;
+
+    if (x >= left && x <= right && y >= top && y <= bottom) {
+      return linkData;
+    }
+  }
+
+  return null;
+}
+
+function openPdfLink(href) {
+  if (href.startsWith("mailto:")) {
+    window.location.href = href;
+    return;
+  }
+
+  window.open(href, "_blank", "noopener,noreferrer");
 }
 
 function applyPdfZoom() {
@@ -288,9 +363,9 @@ function createFallbackPdfLinks(pageNumber, viewport) {
       link.rel = "noopener noreferrer";
       link.setAttribute("aria-label", linkData.label);
       link.style.left = `${linkData.left * scaleX}px`;
-      link.style.top = `${linkData.top * scaleY}px`;
+      link.style.top = `${(linkData.top - 8) * scaleY}px`;
       link.style.width = `${linkData.width * scaleX}px`;
-      link.style.height = `${linkData.height * scaleY}px`;
+      link.style.height = `${(linkData.height + 16) * scaleY}px`;
 
       return link;
     });
@@ -344,6 +419,7 @@ async function renderPdfPages() {
       const textContent = await page.getTextContent();
 
       pageElement.className = "pdf-page";
+      pageElement.dataset.pageNumber = pageNumber;
       pageElement.style.width = `${viewport.width}px`;
       pageElement.style.height = `${viewport.height}px`;
       pageImage.decoding = "async";

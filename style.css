@@ -170,6 +170,7 @@ main {
   position: absolute;
   z-index: 5;
   display: block;
+  pointer-events: auto;
 }
 
 .pdf-link:hover,
