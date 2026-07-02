@@ -9,6 +9,8 @@ A lightweight GitHub Pages site that shows a fixed PDF portfolio with PDF.js and
 - `script.js` - PDF.js rendering, PageFlip controls, download, fullscreen, and zoom logic
 - `assets/pdf/portfolio.pdf` - fixed portfolio PDF loaded by the reader
 
+PDF links are restored as clickable overlay areas after each page is rendered.
+
 ## Local Preview
 
 Open `index.html` in a browser, or serve the folder with any static file server.

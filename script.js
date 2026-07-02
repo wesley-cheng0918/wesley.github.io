@@ -31,6 +31,31 @@ const pdfBookWrap = document.querySelector(".pdf-book-wrap");
 const maxPdfCanvasSide = 1600;
 const minPdfZoom = 0.8;
 const maxPdfZoom = 1.8;
+const textLinkPattern = /(https?:\/\/[^\s<>"']+|www\.[^\s<>"']+|[\w.+-]+@[\w.-]+\.[A-Za-z]{2,})/gi;
+const fallbackPdfLinks = [
+  {
+    pageNumber: 36,
+    href: "https://youtube.com/shorts/OIk8ZS0a4FA",
+    label: "https://youtube.com/shorts/OIk8ZS0a4FA",
+    pageWidth: 858.898,
+    pageHeight: 612.283,
+    left: 433.2256,
+    top: 539.6977,
+    width: 244.5552,
+    height: 12
+  },
+  {
+    pageNumber: 37,
+    href: "https://youtu.be/S9zbaoA9CcE",
+    label: "https://youtu.be/S9zbaoA9CcE",
+    pageWidth: 858.898,
+    pageHeight: 612.283,
+    left: 501.6143,
+    top: 539.6977,
+    width: 179.3676,
+    height: 12
+  }
+];
 
 if (window.pdfjsLib) {
   pdfjsLib.GlobalWorkerOptions.workerSrc =
@@ -129,6 +154,148 @@ function getRenderViewport(page, scale) {
   return page.getViewport({ scale: safeScale });
 }
 
+async function getDestinationPageIndex(destination) {
+  if (!pdfState.document || !destination) {
+    return null;
+  }
+
+  const explicitDestination = typeof destination === "string"
+    ? await pdfState.document.getDestination(destination)
+    : destination;
+
+  if (!explicitDestination || !explicitDestination[0]) {
+    return null;
+  }
+
+  const pageIndex = await pdfState.document.getPageIndex(explicitDestination[0]);
+  return Number.isInteger(pageIndex) ? pageIndex : null;
+}
+
+function createPdfLink(annotation, viewport) {
+  if (!annotation.url && !annotation.unsafeUrl && !annotation.dest) {
+    return null;
+  }
+
+  const bounds = viewport.convertToViewportRectangle(annotation.rect);
+  const left = Math.min(bounds[0], bounds[2]);
+  const top = Math.min(bounds[1], bounds[3]);
+  const width = Math.abs(bounds[0] - bounds[2]);
+  const height = Math.abs(bounds[1] - bounds[3]);
+  const link = document.createElement("a");
+  const url = annotation.url || annotation.unsafeUrl;
+
+  link.className = "pdf-link";
+  link.style.left = `${left}px`;
+  link.style.top = `${top}px`;
+  link.style.width = `${width}px`;
+  link.style.height = `${height}px`;
+
+  if (url) {
+    link.href = url;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.setAttribute("aria-label", url);
+    return link;
+  }
+
+  link.href = "#";
+  link.setAttribute("aria-label", "Go to linked PDF page");
+  link.addEventListener("click", async (event) => {
+    event.preventDefault();
+
+    const pageIndex = await getDestinationPageIndex(annotation.dest);
+
+    if (pageIndex === null || !pdfState.pageFlip) {
+      return;
+    }
+
+    if (typeof pdfState.pageFlip.flip === "function") {
+      pdfState.pageFlip.flip(pageIndex);
+    }
+
+    pdfState.pageNumber = pageIndex + 1;
+    updatePdfStatus();
+  });
+
+  return link;
+}
+
+function normalizeTextLink(text) {
+  const cleanText = text.replace(/[).,\]]+$/, "");
+
+  if (cleanText.includes("@") && !cleanText.startsWith("http")) {
+    return `mailto:${cleanText}`;
+  }
+
+  if (cleanText.startsWith("www.")) {
+    return `https://${cleanText}`;
+  }
+
+  return cleanText;
+}
+
+function createTextPdfLinks(textContent, viewport) {
+  if (!window.pdfjsLib || !pdfjsLib.Util) {
+    return [];
+  }
+
+  return textContent.items.flatMap((item) => {
+    if (!item.str) {
+      return [];
+    }
+
+    const matches = [...item.str.matchAll(textLinkPattern)];
+
+    if (!matches.length) {
+      return [];
+    }
+
+    const transform = pdfjsLib.Util.transform(viewport.transform, item.transform);
+    const fontHeight = Math.hypot(transform[2], transform[3]);
+    const itemWidth = item.width * viewport.scale;
+
+    return matches.map((match) => {
+      const link = document.createElement("a");
+      const startRatio = match.index / item.str.length;
+      const widthRatio = match[0].length / item.str.length;
+
+      link.className = "pdf-link";
+      link.href = normalizeTextLink(match[0]);
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.setAttribute("aria-label", match[0]);
+      link.style.left = `${transform[4] + itemWidth * startRatio}px`;
+      link.style.top = `${transform[5] - fontHeight}px`;
+      link.style.width = `${Math.max(itemWidth * widthRatio, fontHeight)}px`;
+      link.style.height = `${fontHeight * 1.2}px`;
+
+      return link;
+    });
+  });
+}
+
+function createFallbackPdfLinks(pageNumber, viewport) {
+  return fallbackPdfLinks
+    .filter((linkData) => linkData.pageNumber === pageNumber)
+    .map((linkData) => {
+      const link = document.createElement("a");
+      const scaleX = viewport.width / linkData.pageWidth;
+      const scaleY = viewport.height / linkData.pageHeight;
+
+      link.className = "pdf-link";
+      link.href = linkData.href;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.setAttribute("aria-label", linkData.label);
+      link.style.left = `${linkData.left * scaleX}px`;
+      link.style.top = `${linkData.top * scaleY}px`;
+      link.style.width = `${linkData.width * scaleX}px`;
+      link.style.height = `${linkData.height * scaleY}px`;
+
+      return link;
+    });
+}
+
 async function renderPdfPages() {
   if (!pdfState.document || !pdfBook) {
     updatePdfStatus();
@@ -173,12 +340,33 @@ async function renderPdfPages() {
 
       const pageElement = document.createElement("div");
       const pageImage = document.createElement("img");
+      const annotations = await page.getAnnotations({ intent: "display" });
+      const textContent = await page.getTextContent();
 
       pageElement.className = "pdf-page";
+      pageElement.style.width = `${viewport.width}px`;
+      pageElement.style.height = `${viewport.height}px`;
       pageImage.decoding = "async";
       pageImage.src = canvas.toDataURL("image/png");
       pageImage.alt = `PDF page ${pageNumber}`;
       pageElement.append(pageImage);
+
+      annotations.forEach((annotation) => {
+        const link = createPdfLink(annotation, viewport);
+
+        if (link) {
+          pageElement.append(link);
+        }
+      });
+
+      createTextPdfLinks(textContent, viewport).forEach((link) => {
+        pageElement.append(link);
+      });
+
+      createFallbackPdfLinks(pageNumber, viewport).forEach((link) => {
+        pageElement.append(link);
+      });
+
       pages.push(pageElement);
     }
 
