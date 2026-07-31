@@ -1,1 +1,27 @@
 .vs/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Secrets and credentials
+*.key
+*.pem
+*.p12
+*.pfx
+*.crt
+*.cer
+*.jks
+*.keystore
+*secret*
+*secrets*
+*credential*
+*credentials*
+*token*
+*password*
+
+# Local config
+config.local.*
+*.local.json
