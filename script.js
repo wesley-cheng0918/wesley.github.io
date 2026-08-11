@@ -35,25 +35,47 @@ const textLinkPattern = /(https?:\/\/[^\s<>"']+|www\.[^\s<>"']+|[\w.+-]+@[\w.-]+
 const defaultTextLinkPages = new Set();
 const fallbackPdfLinks = [
   {
-    pageNumber: 36,
+    pageNumber: 19,
+    href: "https://youtu.be/Ib2HUEuULJg",
+    label: "https://youtu.be/Ib2HUEuULJg",
+    pageWidth: 858.898,
+    pageHeight: 612.283,
+    left: 167.3259,
+    top: 569.747,
+    width: 180.6924,
+    height: 12
+  },
+  {
+    pageNumber: 28,
     href: "https://youtube.com/shorts/OIk8ZS0a4FA",
     label: "https://youtube.com/shorts/OIk8ZS0a4FA",
     pageWidth: 858.898,
     pageHeight: 612.283,
-    left: 433.2256,
-    top: 539.6977,
+    left: 432.9795,
+    top: 538.9194,
     width: 244.5552,
     height: 12
   },
   {
-    pageNumber: 37,
+    pageNumber: 29,
     href: "https://youtu.be/S9zbaoA9CcE",
     label: "https://youtu.be/S9zbaoA9CcE",
     pageWidth: 858.898,
     pageHeight: 612.283,
-    left: 501.6143,
-    top: 539.6977,
+    left: 501.3662,
+    top: 538.9194,
     width: 179.3676,
+    height: 12
+  },
+  {
+    pageNumber: 33,
+    href: "https://youtu.be/BqN5mxEcS_Y",
+    label: "https://youtu.be/BqN5mxEcS_Y",
+    pageWidth: 858.898,
+    pageHeight: 612.283,
+    left: 656.165,
+    top: 426.7641,
+    width: 183.474,
     height: 12
   }
 ];
