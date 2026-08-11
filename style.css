@@ -131,6 +131,51 @@ main {
   background: #101217;
 }
 
+.page-arrow {
+  position: absolute;
+  top: 50%;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 72px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
+  color: var(--color-text);
+  background: rgba(16, 18, 23, 0.72);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  transform: translateY(-50%);
+  transition: background 180ms ease, border-color 180ms ease, transform 180ms ease;
+}
+
+.page-arrow:hover,
+.page-arrow:focus-visible {
+  border-color: rgba(231, 166, 89, 0.7);
+  background: rgba(231, 166, 89, 0.18);
+  outline: none;
+  transform: translateY(-50%) scale(1.04);
+}
+
+.page-arrow:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
+.page-arrow span {
+  font-size: 3rem;
+  line-height: 1;
+  transform: translateY(-2px);
+}
+
+.page-arrow-left {
+  left: 18px;
+}
+
+.page-arrow-right {
+  right: 18px;
+}
+
 .pdf-book {
   --pdf-zoom: 1;
   width: min(100%, 980px);
@@ -228,10 +273,27 @@ main {
 
   .pdf-book-wrap {
     min-height: 380px;
-    padding: 14px;
+    padding: 14px 54px;
   }
 
   .pdf-book {
     min-height: 320px;
+  }
+
+  .page-arrow {
+    width: 36px;
+    height: 56px;
+  }
+
+  .page-arrow-left {
+    left: 8px;
+  }
+
+  .page-arrow-right {
+    right: 8px;
+  }
+
+  .page-arrow span {
+    font-size: 2.3rem;
   }
 }

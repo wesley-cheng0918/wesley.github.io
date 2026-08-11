@@ -23,6 +23,8 @@ const pdfStatus = document.querySelector("[data-pdf-status]");
 const pdfEmpty = document.querySelector("[data-pdf-empty]");
 const pdfPrevButton = document.querySelector("[data-pdf-prev]");
 const pdfNextButton = document.querySelector("[data-pdf-next]");
+const pdfSidePrevButton = document.querySelector("[data-pdf-side-prev]");
+const pdfSideNextButton = document.querySelector("[data-pdf-side-next]");
 const pdfDownloadButton = document.querySelector("[data-pdf-download]");
 const pdfFullscreenButton = document.querySelector("[data-pdf-fullscreen]");
 const pdfZoomOutButton = document.querySelector("[data-pdf-zoom-out]");
@@ -97,6 +99,8 @@ function updatePdfControls() {
 
   pdfPrevButton.disabled = !hasPageFlip;
   pdfNextButton.disabled = !hasPageFlip;
+  pdfSidePrevButton.disabled = !hasPageFlip;
+  pdfSideNextButton.disabled = !hasPageFlip;
   pdfDownloadButton.disabled = !pdfState.fileUrl || pdfState.isRendering;
   pdfZoomOutButton.disabled = !hasDocument || pdfState.scale <= minPdfZoom || pdfState.isRendering;
   pdfZoomInButton.disabled = !hasDocument || pdfState.scale >= maxPdfZoom || pdfState.isRendering;
@@ -146,6 +150,7 @@ function createPageFlip() {
     maxHeight: 760,
     maxShadowOpacity: 0.45,
     mobileScrollSupport: false,
+    useMouseEvents: false,
     showCover: true
   });
 
@@ -604,7 +609,7 @@ pdfFileInput.addEventListener("change", (event) => {
   loadPdf(event.target.files[0]);
 });
 
-pdfPrevButton.addEventListener("click", () => {
+function goToPreviousPdfPage() {
   if (!pdfState.document || !pdfState.pageFlip) {
     return;
   }
@@ -615,9 +620,9 @@ pdfPrevButton.addEventListener("click", () => {
   }
 
   pdfState.pageFlip.flipPrev();
-});
+}
 
-pdfNextButton.addEventListener("click", () => {
+function goToNextPdfPage() {
   if (!pdfState.document || !pdfState.pageFlip) {
     return;
   }
@@ -628,7 +633,12 @@ pdfNextButton.addEventListener("click", () => {
   }
 
   pdfState.pageFlip.flipNext();
-});
+}
+
+pdfPrevButton.addEventListener("click", goToPreviousPdfPage);
+pdfNextButton.addEventListener("click", goToNextPdfPage);
+pdfSidePrevButton.addEventListener("click", goToPreviousPdfPage);
+pdfSideNextButton.addEventListener("click", goToNextPdfPage);
 
 pdfDownloadButton.addEventListener("click", () => {
   if (!pdfState.fileUrl) {
